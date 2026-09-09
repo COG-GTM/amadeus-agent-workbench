@@ -7,7 +7,7 @@ import { Button, Card, Input, Label } from '@/components/ui';
 /** Seeded PNRs that always exist after `npm run seed`. */
 const DEMO_PNRS = [
   { locator: 'X7K2PQ', note: 'BA LHR → JFK · seat 14A' },
-  { locator: 'M3JR8T', note: 'Demo booking' },
+  { locator: 'M3JR8T', note: 'SQ LHR → SIN · 2 passengers' },
 ];
 
 /** Locators are 6 alphanumeric characters; we uppercase and strip anything else as the agent types. */
