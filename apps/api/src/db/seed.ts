@@ -103,7 +103,6 @@ function seedPnrs(db: Database.Database) {
       family: 'STANDARD',
       pax: [['MS', 'AMELIE', 'DURAND', '1988-04-12']],
       seats: ['14A'],
-      total: 512.0,
     },
     {
       locator: 'M3JR8T',
@@ -115,9 +114,11 @@ function seedPnrs(db: Database.Database) {
         ['MRS', 'CHIOMA', 'OKAFOR', '1979-06-23'],
       ],
       seats: ['22D', '22E'],
-      total: 2349.0,
     },
   ] as const;
+
+  // Totals are derived from the seeded fare so demo PNRs agree with what the GUI would have charged.
+  const farePrice = db.prepare('SELECT price FROM fares WHERE flight_id = ? AND family = ? AND cabin = ?');
 
   const insPnr = db.prepare(
     'INSERT INTO pnrs (locator, status, created_at, contact_email, total_price, currency) VALUES (?, ?, ?, ?, ?, ?)',
@@ -133,7 +134,9 @@ function seedPnrs(db: Database.Database) {
   );
 
   for (const d of demo) {
-    insPnr.run(d.locator, 'HK', new Date().toISOString(), d.email, d.total, 'EUR');
+    const fare = farePrice.get(d.flightId, d.family, 'ECONOMY') as { price: number } | undefined;
+    const total = round2((fare?.price ?? 0) * d.pax.length);
+    insPnr.run(d.locator, 'HK', new Date().toISOString(), d.email, total, 'EUR');
     d.pax.forEach(([title, first, last, dob], i) => insPax.run(d.locator, i, title, first, last, dob, d.email));
     insSeg.run(d.locator, 0, d.flightId, d.family, 'ECONOMY', JSON.stringify(d.seats));
     for (const s of d.seats) insSeat.run(d.flightId, s, d.locator);

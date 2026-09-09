@@ -30,7 +30,7 @@ test.describe('Amadeus Agent Workbench smoke', () => {
   test('cryptic terminal answers HE with the help banner', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Cryptic' }).click();
-    const input = page.getByPlaceholder('AN20SEPLHRJFK');
+    const input = page.getByRole('textbox', { name: 'Cryptic command' });
     await expect(input).toBeFocused();
     await input.fill('HE');
     await input.press('Enter');
