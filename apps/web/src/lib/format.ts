@@ -36,3 +36,47 @@ export const FARE_LABEL: Record<string, string> = {
   STANDARD: 'Standard',
   FLEX: 'Flex',
 };
+
+/** Human label for a cabin, e.g. "Economy". */
+export const CABIN_LABEL: Record<string, string> = {
+  ECONOMY: 'Economy',
+  BUSINESS: 'Business',
+};
+
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+/** Formats a local ISO string as an Amadeus cryptic date, e.g. "16SEP". */
+export function crypticDate(localIso: string): string {
+  const day = localIso.slice(8, 10);
+  const month = Number(localIso.slice(5, 7)) - 1;
+  return `${day}${MONTHS[month] ?? '???'}`;
+}
+
+/** Formats an ISO instant as a cryptic timestamp in UTC, e.g. "16SEP26/1042Z". */
+export function crypticTimestamp(isoInstant: string): string {
+  const d = new Date(isoInstant);
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const month = MONTHS[d.getUTCMonth()];
+  const year = String(d.getUTCFullYear()).slice(2);
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${day}${month}${year}/${hh}${mm}Z`;
+}
+
+/** ISO weekday number (Monday = 1 … Sunday = 7) for a local ISO date, as shown on cryptic segment lines. */
+export function crypticWeekday(localIso: string): number {
+  const dow = new Date(localIso.slice(0, 10)).getDay();
+  return dow === 0 ? 7 : dow;
+}
+
+/** Splits "BA0117" into "BA 117" — the carrier code and un-padded flight number as printed in a PNR. */
+export function crypticFlightNumber(flightNumber: string): string {
+  const carrier = flightNumber.slice(0, 2);
+  const num = flightNumber.slice(2).replace(/^0+/, '') || '0';
+  return `${carrier} ${num.padStart(4, ' ')}`;
+}
+
+/** Formats a YYYY-MM-DD string as "12 Apr 1988" for passenger lists. */
+export function formatLongDate(isoDate: string): string {
+  return new Date(isoDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
