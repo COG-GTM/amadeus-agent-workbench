@@ -1,0 +1,12 @@
+{
+  // Extensions VS Code offers to install when the repo is opened. Matches .vscode/settings.json.
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "editorconfig.editorconfig",
+    "ms-playwright.playwright",
+    "vitest.explorer",
+    "bierner.markdown-mermaid"
+  ]
+}
