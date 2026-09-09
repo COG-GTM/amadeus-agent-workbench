@@ -1,7 +1,7 @@
 // PNR (booking) creation and retrieval.
 import type { BookedSegment, CreateBookingRequest, Passenger, Pnr, PnrStatus } from '@workbench/shared';
 import { getDb } from '../db/connection.ts';
-import { getFlight } from './flights.service.ts';
+import { getFlight, getSeatMap } from './flights.service.ts';
 
 /** Characters used in booking references. Amadeus locators avoid ambiguous chars like 0/O and 1/I. */
 const LOCATOR_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -41,7 +41,9 @@ export function createBooking(req: CreateBookingRequest): Pnr {
   if (fare.seatsLeft < req.passengers.length) throw new BookingError('Not enough seats left at this fare', 409);
   if (req.seats.length !== req.passengers.length) throw new BookingError('One seat entry per passenger is required');
 
-  const seatSurcharge = req.seats.filter(Boolean).length * 0; // seat pricing is added by the seat-map step later
+  // Seat surcharges come from the seat map so the total matches what the agent was quoted.
+  const seatPrices = new Map((getSeatMap(flight.id)?.rows.flat() ?? []).map((s) => [s.number, s.price]));
+  const seatSurcharge = req.seats.reduce((sum, number) => sum + (number ? seatPrices.get(number) ?? 0 : 0), 0);
   const total = round2(fare.price * req.passengers.length + seatSurcharge);
   const locator = generateLocator();
   const createdAt = new Date().toISOString();
