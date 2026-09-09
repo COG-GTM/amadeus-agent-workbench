@@ -1,0 +1,20 @@
+# EditorConfig keeps whitespace consistent across editors (https://editorconfig.org).
+# Prettier (.prettierrc) is the source of truth for code style; these mirror its defaults.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = 120
+
+# Markdown uses trailing double-spaces for hard line breaks.
+[*.md]
+trim_trailing_whitespace = false
+
+# Makefiles require tabs.
+[Makefile]
+indent_style = tab
