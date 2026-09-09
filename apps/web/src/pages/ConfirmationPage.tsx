@@ -185,6 +185,20 @@ export function ConfirmationPage() {
                       </div>
                     );
                   })}
+                  {/* Seat surcharges are whatever the PNR total carries beyond the base fares. */}
+                  {(() => {
+                    const base = pnr.segments.reduce((sum, seg) => {
+                      const fare = seg.flight.fares.find((f) => f.family === seg.fareFamily && f.cabin === seg.cabin);
+                      return sum + (fare?.price ?? 0) * pnr.passengers.length;
+                    }, 0);
+                    const seatSurcharge = Math.round((pnr.totalPrice - base) * 100) / 100;
+                    return seatSurcharge > 0 ? (
+                      <div className="flex justify-between text-slate-600">
+                        <span>Seat selection</span>
+                        <span className="font-medium text-slate-900">{formatPrice(seatSurcharge)}</span>
+                      </div>
+                    ) : null;
+                  })()}
                   <div className="flex justify-between text-slate-600">
                     <span>Taxes &amp; fees</span>
                     <span className="font-medium text-slate-900">Included</span>
