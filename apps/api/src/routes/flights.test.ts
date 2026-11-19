@@ -29,6 +29,24 @@ describe('GET /api/flights/search', () => {
     expect(res.body.results[0].airline.logo).toMatch(/\.svg$/);
   });
 
+  it('attaches each flight its own fares, cheapest first, filtered by cabin', async () => {
+    const query = { origin: 'LHR', destination: 'JFK', date: nextWeek, passengers: 1 };
+    const all = await request(app).get('/api/flights/search').query(query);
+    const business = await request(app)
+      .get('/api/flights/search')
+      .query({ ...query, cabin: 'BUSINESS' });
+    for (const flight of all.body.results) {
+      const prices = flight.fares.map((f: { price: number }) => f.price);
+      expect(prices).toEqual([...prices].sort((a, b) => a - b));
+      const single = await request(app).get(`/api/flights/${flight.id}`);
+      expect(flight.fares).toEqual(single.body.fares);
+    }
+    expect(business.body.results.length).toBeGreaterThan(0);
+    for (const flight of business.body.results) {
+      expect(flight.fares.every((f: { cabin: string }) => f.cabin === 'BUSINESS')).toBe(true);
+    }
+  });
+
   it('rejects malformed queries', async () => {
     const res = await request(app).get('/api/flights/search').query({ origin: 'LONDON', destination: 'JFK', date: 'tomorrow' });
     expect(res.status).toBe(400);

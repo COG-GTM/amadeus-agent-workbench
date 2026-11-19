@@ -38,24 +38,29 @@ const FLIGHT_SELECT = `
   JOIN airports o  ON o.code = f.origin
   JOIN airports d  ON d.code = f.destination`;
 
-/** Loads fares for a flight, optionally restricted to a cabin. */
-function faresFor(flightId: string, cabin?: Cabin): Fare[] {
+type FareRow = { flight_id: string; family: Fare['family']; cabin: Cabin; price: number; seats_left: number };
+
+/** Loads fares for many flights in one query, grouped by flight id, each list cheapest first. */
+function faresByFlight(flightIds: string[], cabin?: Cabin): Map<string, Fare[]> {
+  const byFlight = new Map<string, Fare[]>(flightIds.map((id) => [id, []]));
+  if (flightIds.length === 0) return byFlight;
   const rows = getDb()
     .prepare(
-      `SELECT family, cabin, price, seats_left FROM fares WHERE flight_id = ? ${cabin ? 'AND cabin = ?' : ''}
-       ORDER BY price ASC`,
+      `SELECT flight_id, family, cabin, price, seats_left FROM fares
+       WHERE flight_id IN (SELECT value FROM json_each(?)) ${cabin ? 'AND cabin = ?' : ''}
+       ORDER BY flight_id, price ASC`,
     )
-    .all(...(cabin ? [flightId, cabin] : [flightId])) as {
-    family: Fare['family'];
-    cabin: Cabin;
-    price: number;
-    seats_left: number;
-  }[];
-  return rows.map((r) => ({ family: r.family, cabin: r.cabin, price: r.price, currency: 'EUR', seatsLeft: r.seats_left }));
+    .all(...(cabin ? [JSON.stringify(flightIds), cabin] : [JSON.stringify(flightIds)])) as FareRow[];
+  for (const r of rows) {
+    byFlight
+      .get(r.flight_id)!
+      .push({ family: r.family, cabin: r.cabin, price: r.price, currency: 'EUR', seatsLeft: r.seats_left });
+  }
+  return byFlight;
 }
 
 /** Maps a joined DB row to the API `Flight` shape. */
-function toFlight(r: FlightRow, cabin?: Cabin): Flight {
+function toFlight(r: FlightRow, fares: Fare[]): Flight {
   const airline: Airline = { code: r.al_code, name: r.al_name, logo: r.al_logo, alliance: r.al_alliance };
   const origin: Airport = { code: r.o_code, name: r.o_name, city: r.o_city, country: r.o_country, tz: r.o_tz };
   const destination: Airport = { code: r.d_code, name: r.d_name, city: r.d_city, country: r.d_country, tz: r.d_tz };
@@ -70,7 +75,7 @@ function toFlight(r: FlightRow, cabin?: Cabin): Flight {
     durationMinutes: durationMinutes(r.departure, r.arrival),
     aircraft: r.aircraft,
     stops: r.stops,
-    fares: faresFor(r.id, cabin),
+    fares,
   };
 }
 
@@ -79,16 +84,22 @@ export function searchFlights(q: FlightSearchQuery): Flight[] {
   const rows = getDb()
     .prepare(`${FLIGHT_SELECT} WHERE f.origin = ? AND f.destination = ? AND f.departure LIKE ? ORDER BY f.departure`)
     .all(q.origin, q.destination, `${q.date}%`) as FlightRow[];
-  return rows
-    .map((r) => toFlight(r, q.cabin))
-    // Hide flights that can't seat the whole party in any fare.
-    .filter((f) => f.fares.some((fare) => fare.seatsLeft >= q.passengers));
+  const fares = faresByFlight(
+    rows.map((r) => r.id),
+    q.cabin,
+  );
+  return (
+    rows
+      .map((r) => toFlight(r, fares.get(r.id)!))
+      // Hide flights that can't seat the whole party in any fare.
+      .filter((f) => f.fares.some((fare) => fare.seatsLeft >= q.passengers))
+  );
 }
 
 /** Loads one flight by id, or null. */
 export function getFlight(id: string): Flight | null {
   const row = getDb().prepare(`${FLIGHT_SELECT} WHERE f.id = ?`).get(id) as FlightRow | undefined;
-  return row ? toFlight(row) : null;
+  return row ? toFlight(row, faresByFlight([row.id]).get(row.id)!) : null;
 }
 
 /** Builds the seat map for a flight from its aircraft layout plus sold seats. */
