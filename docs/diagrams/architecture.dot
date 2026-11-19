@@ -1,0 +1,64 @@
+// Architecture of amadeus-agent-workbench as it exists on main.
+// Edit this file, then run docs/diagrams/render.sh to regenerate the PNG and SVG.
+digraph workbench {
+  graph [rankdir=TB, fontname="DejaVu Sans", fontsize=18, labelloc=t, nodesep=0.35, ranksep=0.55, pad=0.3,
+         label="Amadeus Agent Workbench — architecture on main"];
+  node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=15, fillcolor=white, color="#475569", margin="0.18,0.08"];
+  edge  [fontname="DejaVu Sans", fontsize=13, color="#475569"];
+
+  user [label="Travel agent (browser)", shape=oval, fillcolor="#e0f2fe"];
+
+  subgraph cluster_web {
+    label="apps/web — React 19 + Vite + Tailwind v4 (dev server :5173)";
+    style="rounded,filled"; fillcolor="#eff6ff"; color="#1d4ed8"; fontsize=16;
+    router [label="main.tsx\nReact Router + React Query"];
+    shell  [label="AppShell\nheader, nav, terminal toggle"];
+    {rank=same;
+      search [label="SearchPage (built)\n+ AirportInput typeahead"];
+      stubs  [label="Results / SeatMap / Passengers /\nConfirmation / Bookings pages\n(placeholders)", fillcolor="#f1f5f9", style="rounded,filled,dashed"];
+      term   [label="TerminalDrawer\nsessionStorage session id"];
+    }
+    apiclient [label="lib/api.ts\ntyped fetch wrappers"];
+    router -> shell;
+    shell -> search; shell -> stubs; shell -> term;
+    search -> apiclient [label="airports"];
+    term -> apiclient [label="terminal"];
+  }
+
+  shared [label="packages/shared\ndomain types + API route table", fillcolor="#fef9c3", color="#a16207"];
+  proxy  [label="Vite proxy  /api → :4000", shape=cds, fillcolor="#e2e8f0"];
+
+  subgraph cluster_api {
+    label="apps/api — Express 5 + Zod (tsx, :4000)";
+    style="rounded,filled"; fillcolor="#f0fdf4"; color="#15803d"; fontsize=16;
+    server [label="server.ts\nseeds DB if flights table is empty"];
+    app    [label="app.ts  createApp()\ncors, JSON, /api/health, 500 handler"];
+    {rank=same;
+      rflights  [label="routes/flights.ts\nairports, airlines, search,\nflight, seatmap"];
+      rbookings [label="routes/bookings.ts\nPOST + GET /bookings"];
+      rterm     [label="routes/terminal.ts\nPOST /terminal"];
+    }
+    {rank=same;
+      sflights [label="flights.service\nsearch, seat map from\naircraft layouts"];
+      spnr     [label="pnr.service\ncreate PNR, locator,\ninventory decrement"];
+      sterm    [label="terminal.service\nHE only; in-memory\nsession Map"];
+    }
+    conn [label="db/connection.ts  getDb()\nWAL, foreign keys, schema.sql"];
+    seed [label="db/seed.ts + seed-data.ts\n16 airlines, 21 airports, 80 routes × 45 days,\nfares, ~35% seat occupancy, 2 demo PNRs"];
+    server -> app;
+    server -> seed [style=dashed, label="first start"];
+    app -> rflights; app -> rbookings; app -> rterm;
+    rflights -> sflights; rbookings -> spnr; rterm -> sterm;
+    spnr -> sflights [style=dashed, label="getFlight"];
+    sflights -> conn; spnr -> conn; seed -> conn;
+  }
+
+  db [label="SQLite  apps/api/data/workbench.db\nairlines, airports, flights, fares, seat_assignments,\npnrs, pnr_passengers, pnr_segments", shape=cylinder, fillcolor="#fde68a", color="#92400e"];
+
+  user -> router;
+  apiclient -> proxy [label="fetch /api/*"];
+  proxy -> app [label="HTTP JSON"];
+  conn -> db [label="better-sqlite3 (sync)"];
+  shared -> apiclient [style=dotted, color="#a16207", label="imports"];
+  shared -> rflights  [style=dotted, color="#a16207"];
+}
