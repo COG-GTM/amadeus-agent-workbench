@@ -7,7 +7,7 @@ cryptic-command terminal panel alongside the modern GUI. Built as a training dem
 
 ## Quick start
 
-Requires Node 22 (pinned in `.nvmrc`) and npm. With nvm, run `nvm install` in the repo root to install and switch to it.
+Requires Node 22.13 or later on the 22 line (`.nvmrc` pins 22; ESLint dependencies need 22.13+) and npm. With nvm, run `nvm install` in the repo root to install and switch to it.
 
 ```bash
 npm install
