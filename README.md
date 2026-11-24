@@ -7,7 +7,7 @@ cryptic-command terminal panel alongside the modern GUI. Built as a training dem
 
 ## Quick start
 
-Requires Node 22 (see `.nvmrc`; run `nvm use` if you use nvm) and npm.
+Requires Node 22 (pinned in `.nvmrc`) and npm. With nvm, run `nvm install` in the repo root to install and switch to it.
 
 ```bash
 npm install
@@ -40,9 +40,9 @@ Re-seed any time with `npm run seed`.
 ## Demo data
 
 - 16 airlines with bundled logos, 21 airports across Europe, North America, the Gulf and Asia.
-- 45 days of schedules from the day the database is seeded, fare families `LIGHT` / `STANDARD` / `FLEX` in Economy and Business.
+- 45 days of schedules starting on the UTC date the database is seeded, fare families `LIGHT` / `STANDARD` / `FLEX` in Economy and Business.
 - Demo PNRs `X7K2PQ` and `M3JR8T`.
-- Cryptic terminal: only `HE` (help) works today. The help text lists `AN20SEPLHRJFK`, `SS1Y1`, `RT` and `RTX7K2PQ`,
+- Cryptic terminal: only `HE` (help) works today. The help text lists `AN20SEPLHRJFK`, `SS1Y2`, `RT` and `RTX7K2PQ`,
   but they return `INVALID ENTRY`.
 
 ## Known issue
